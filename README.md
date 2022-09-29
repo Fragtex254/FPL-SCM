@@ -1,0 +1,5 @@
+This is a FPL-SCM
+单片机指纹锁
+AS608
+SG90
+STC89C52
