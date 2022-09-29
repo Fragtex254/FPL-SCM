@@ -1,0 +1,373 @@
+C51 COMPILER V9.54   MAIN                                                                  06/16/2022 15:36:50 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\C51\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst
+                    -) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "LCD1602.h"
+   3          #include "MatrixKey.h"
+   4          #include "Delay.h"
+   5          #include "Buzzer.h"
+   6          #include "Key.h"
+   7          #include "Servo.h"
+   8          #include "AS608.h"
+   9          #include "UART.h"
+  10          
+  11          //用到的标志变量
+  12          unsigned char Count;                                  //键入密码位数
+  13          unsigned char InputTime=3;                            //输入密码次数
+  14          unsigned char KeyNum;                                 //矩阵按键编号
+  15          unsigned char KNum;                                   //独立按键编号
+  16          unsigned int Password;                                //键入密码值
+  17          unsigned int Keyword=1017;                            //正确密码
+  18          unsigned char Unlocked=0;                             //开锁标志变量
+  19          
+  20          //用到的自定义函数前置声明
+  21          void Welcome();                                       //欢迎程序
+  22          void NumMode();                                       //数字键入模式
+  23          void ChangePassword();                                //更改密码模式
+  24          void FingerPrintMode();                               //指纹输入模式
+  25          void Menu();                                          //菜单界面
+  26          void Exit();                                          //退出声明
+  27          //主函数
+  28          void main()                                           //主函数
+  29          {
+  30   1        Welcome();                                          //欢迎程序
+  31   1        while(1)
+  32   1        {
+  33   2          Menu();                                           //进入主菜单
+  34   2        }
+  35   1      }
+  36          //欢迎程序
+  37          void Welcome()
+  38          {
+  39   1        LCD_Init();
+  40   1        LCD_ShowString(1,1,"CodeLock Program");
+  41   1        LCD_ShowString(2,1,"PassWord is:");
+  42   1        LCD_ShowNum(2,13,Keyword,4);
+  43   1        while(1)
+  44   1        {
+  45   2          KeyNum=MatrixKey();
+  46   2          if(KeyNum)
+  47   2          {
+  48   3            LCD_Init();
+  49   3            KeyNum=0;
+  50   3            Buzzer_Time(100);
+  51   3            return;
+  52   3          }
+  53   2        }
+  54   1      }
+C51 COMPILER V9.54   MAIN                                                                  06/16/2022 15:36:50 PAGE 2   
+
+  55          
+  56          //菜单程序
+  57          void Menu()
+  58          {
+  59   1        LCD_ShowString(1,1,"S13:FPL  S14:NBL");
+  60   1        LCD_ShowString(2,1,"S15:RES  S16:ESC");
+  61   1        while(1)
+  62   1        {
+  63   2          KeyNum=MatrixKey();
+  64   2          switch(KeyNum){
+  65   3          case 13:
+  66   3            Buzzer_Time(100);                               //蜂鸣器响一次，反馈按键被按下
+  67   3            FingerPrintMode();                              //进入指纹模式
+  68   3            LCD_ShowString(1,1,"S13:FPL  S14:NBL");         //提示信息
+  69   3            LCD_ShowString(2,1,"S15:RES  S16:ESC");
+  70   3            break;
+  71   3          case 14:
+  72   3            Buzzer_Time(100);                               //蜂鸣器响一次，反馈按键被按下
+  73   3            NumMode();                                      //进入键入模式
+  74   3            LCD_ShowString(1,1,"S13:FPL  S14:NBL");         //提示信息
+  75   3            LCD_ShowString(2,1,"S15:RES  S16:ESC");
+  76   3            break;
+  77   3          case 15:
+  78   3            Buzzer_Time(100);                               //蜂鸣器响一次，反馈按键被按下
+  79   3            ChangePassword();                               //进入密码修改模式
+  80   3            LCD_ShowString(1,1,"S13:FPL  S14:NBL");         //提示信息
+  81   3            LCD_ShowString(2,1,"S15:RES  S16:ESC");
+  82   3            break;
+  83   3          case 16:
+  84   3            Buzzer_Time(100);                               //蜂鸣器响一次，反馈按键被按下
+  85   3            Exit();                                         //进入退出致谢
+  86   3            LCD_Init();                                     //清屏
+  87   3            break;
+  88   3          }
+  89   2        }
+  90   1      }
+  91          
+  92          //更改密码模式
+  93          void ChangePassword()
+  94          {
+  95   1        unsigned int temp=0;                                //用于更换密码的过程变量
+  96   1        LCD_Init();
+  97   1        LCD_ShowString(1,1,"Password:");                    //显示提示信息
+  98   1        LCD_ShowString(2,5,"T:");                           //显示剩余输入次数提示
+  99   1        LCD_ShowNum(2,7,InputTime,1);                       //显示剩余输入次数
+ 100   1        while(1)                                            //此处用于检验能否有资格更改密码
+ 101   1        {
+ 102   2          KeyNum=MatrixKey();                               //获得键入值
+ 103   2          if(KeyNum)                                        //根据键入值分支
+ 104   2          {
+ 105   3            if(KeyNum<=10)                                  //如果S1~S10按键按下，输入密码
+ 106   3            {
+ 107   4              Buzzer_Time(100);
+ 108   4              if(Count<4)                                   //如果输入次数小于4
+ 109   4              {
+ 110   5                temp*=10;                                   //密码左移一位
+ 111   5                temp+=KeyNum%10;                            //获取一位密码
+ 112   5                Count++;                                    //计次加一  
+ 113   5              }
+ 114   4              LCD_ShowNum(1,13,temp,4);                     //更新显示
+ 115   4            }
+ 116   3            if(KeyNum==11)                                  //如果S11按键按下，确认
+C51 COMPILER V9.54   MAIN                                                                  06/16/2022 15:36:50 PAGE 3   
+
+ 117   3            {
+ 118   4              Buzzer_Time(100);                             //蜂鸣器响应，反馈按键被按下
+ 119   4              if(temp==Keyword)                             //如果密码等于正确密码
+ 120   4              {
+ 121   5                LCD_ShowString(2,1,"OK ");                  //显示OK
+ 122   5                temp=0;                                     //密码清零
+ 123   5                Count=0;                                    //计次清零
+ 124   5                Unlocked=1;                                 //已开锁变量
+ 125   5                InputTime=3;                                //重新允许三次错误输入
+ 126   5                LCD_ShowNum(2,7,InputTime,1);
+ 127   5                LCD_ShowNum(1,13,temp,4);                   //更新显示
+ 128   5                LCD_ShowString(2,10,"S16:Ent");
+ 129   5              }
+ 130   4              else if(InputTime>0)                          //仍有键入次数时
+ 131   4              {
+ 132   5                LCD_ShowString(2,1,"ERR");                  //显示ERR
+ 133   5                temp=0;                                     //密码清零
+ 134   5                Count=0;                                    //计次清零
+ 135   5                InputTime--;
+ 136   5                LCD_ShowNum(1,13,Password,4);               //更新显示
+ 137   5                LCD_ShowNum(2,7,InputTime,1);
+ 138   5              }
+ 139   4              else                                          //如果键入次数使用完了
+ 140   4              {
+ 141   5                while(1)                                    //进入蜂鸣器报警
+ 142   5                {
+ 143   6                  Buzzer_Time(100);
+ 144   6                  Delay(100);
+ 145   6                }
+ 146   5              }
+ 147   4            }
+ 148   3            if(KeyNum==12)                                  //如果S12按键按下，取消
+ 149   3            {
+ 150   4              Buzzer_Time(100);
+ 151   4              temp=0;                                       //密码清零
+ 152   4              Count=0;                                      //计次清零
+ 153   4              LCD_ShowNum(1,13,temp,4);                       //更新显示
+ 154   4            }
+ 155   3            if(KeyNum==16)                                  //如果S16按键按下，退出当前模式
+ 156   3            {
+ 157   4              Buzzer_Time(100);                             //按键被按下提示
+ 158   4              if(Unlocked==1)                               //如果当时已经开锁则可以跳出循环
+ 159   4              {
+ 160   5                temp=0;       
+ 161   5                Count=0;
+ 162   5                LCD_Init();                                 //清屏
+ 163   5                InputTime=3;                                //重置键入机会次数
+ 164   5                break;
+ 165   5              }
+ 166   4            else                                            //否则将跳出更改密码的函数体
+ 167   4                return;
+ 168   4            }
+ 169   3          }
+ 170   2        }
+ 171   1        LCD_Init();                                         //清屏
+ 172   1        LCD_ShowString(1,1,"New_Password:");                //更改密码指引
+ 173   1        LCD_ShowString(2,10,"S16:Esc");                     //退出提示
+ 174   1        while(1)                                            //此处开始，用于更换密码
+ 175   1        {
+ 176   2          KeyNum=MatrixKey();                               //获得键入的密码值
+ 177   2          if(KeyNum)                                        //如果键入了密码
+ 178   2          {
+C51 COMPILER V9.54   MAIN                                                                  06/16/2022 15:36:50 PAGE 4   
+
+ 179   3            if(KeyNum<=10)                                  //如果S1~S10按键按下，输入密码
+ 180   3            {
+ 181   4              Buzzer_Time(100);                             //反馈按键输入
+ 182   4              if(Count<4)                                   //如果输入次数小于4
+ 183   4              {
+ 184   5                temp*=10;                                   //密码左移一位
+ 185   5                temp+=KeyNum%10;                            //获取一位密码
+ 186   5                Count++;                                    //计次加一
+ 187   5              }
+ 188   4              LCD_ShowNum(2,1,temp,4);                      //更新显示
+ 189   4            }
+ 190   3            if(KeyNum==12)                                  //键入12时，删去末位
+ 191   3            {
+ 192   4              Buzzer_Time(100);                             //反馈按键输入
+ 193   4              temp/=10;                                     //密码去除末位
+ 194   4              Count--;                                      //计次减一
+ 195   4              LCD_ShowNum(2,1,temp,4);                      //更新显示
+ 196   4            }
+ 197   3            if(KeyNum==11)                                  //键入11时，确认更改密码
+ 198   3            {
+ 199   4              Buzzer_Time(100);                             //反馈按键输入
+ 200   4              Keyword=temp;                                 //更换密码                                  
+ 201   4            }
+ 202   3              
+ 203   3            if(KeyNum==16)                                  //如果S16按键按下，退出当前模式
+ 204   3            {
+ 205   4              Buzzer_Time(100);                             //反馈按键输入
+ 206   4              Unlocked=0;                                   //退出重置开锁变量为未开锁状态
+ 207   4              LCD_Init();                                   //初始化屏幕
+ 208   4              return;                                       //退出
+ 209   4            }
+ 210   3          }
+ 211   2        }
+ 212   1      }
+ 213            
+ 214          //指纹识别模式
+ 215          void FingerPrintMode()
+ 216          {
+ 217   1        F_Model_Init();                                     //初始化+指引
+ 218   1        while(1)
+ 219   1        {
+ 220   2          KeyNum=MatrixKey();                               //读取矩阵输入    
+ 221   2          if(KeyNum==13)                                    //键入13
+ 222   2          {
+ 223   3            Buzzer_Time(100);                               //反馈按键键入
+ 224   3            FPM10A_Find_Fingerprint();                      //搜索指纹
+ 225   3            F_Model_Init();                                 //重新初始化
+ 226   3          }
+ 227   2          if(KeyNum==14)                                    //键入14
+ 228   2          {
+ 229   3            Buzzer_Time(100);                               //反馈按键键入
+ 230   3            FPM10A_Add_Fingerprint();                       //进入添加指纹模式
+ 231   3            F_Model_Init();                                 //重新初始化
+ 232   3          }
+ 233   2          if(KeyNum==15)                                    //键入15
+ 234   2          {
+ 235   3            Buzzer_Time(100);                               //反馈按键输入
+ 236   3            FPM10A_Delete_All_Fingerprint();                //清空指纹库
+ 237   3            F_Model_Init();                                 //重新初始化
+ 238   3          }
+ 239   2          if(KeyNum==16)
+ 240   2          {
+C51 COMPILER V9.54   MAIN                                                                  06/16/2022 15:36:50 PAGE 5   
+
+ 241   3            Buzzer_Time(100);                               //反馈按键键入
+ 242   3            Lock();                                         //上锁
+ 243   3            return;
+ 244   3          }
+ 245   2        }
+ 246   1      }
+ 247          
+ 248          
+ 249          //密码键入模式
+ 250          void NumMode()
+ 251          {
+ 252   1        LCD_Init();
+ 253   1        LCD_ShowString(1,1,"Password:");
+ 254   1        LCD_ShowString(2,5,"T:");
+ 255   1        LCD_ShowNum(2,7,InputTime,1);
+ 256   1        LCD_ShowString(2,10,"S16:Esc");
+ 257   1        Count=0;
+ 258   1        while(1)
+ 259   1        {
+ 260   2          KeyNum=MatrixKey();
+ 261   2          if(KeyNum)
+ 262   2          {
+ 263   3            if(KeyNum<=10)                                  //如果S1~S10按键按下，输入密码
+ 264   3            {
+ 265   4              Buzzer_Time(100);
+ 266   4              if(Count<4)                                   //如果输入次数小于4
+ 267   4              {
+ 268   5                Password*=10;                               //密码左移一位
+ 269   5                Password+=KeyNum%10;                        //获取一位密码
+ 270   5                Count++;                                    //计次加一
+ 271   5              }
+ 272   4              LCD_ShowNum(1,13,Password,4);                 //更新显示
+ 273   4            }
+ 274   3            if(KeyNum==11)                                  //如果S11按键按下，确认
+ 275   3            {
+ 276   4              Buzzer_Time(100);
+ 277   4              if(Password==Keyword)                         //如果密码等于正确密码
+ 278   4              {
+ 279   5                LCD_ShowString(2,1,"OK ");                  //显示OK
+ 280   5                Password=0;                                 //密码清零
+ 281   5                Count=0;                                    //计次清零
+ 282   5                Unlocked=1;                                 //已开锁
+ 283   5                InputTime=3;                                //重新允许三次错误输入
+ 284   5                LCD_ShowNum(2,7,InputTime,1);
+ 285   5                LCD_ShowNum(1,13,Password,4);               //更新显示
+ 286   5                Unlock();                                   //舵机解锁
+ 287   5              }
+ 288   4              else if(InputTime>0)                          //否则
+ 289   4              {
+ 290   5                LCD_ShowString(2,1,"ERR");                  //显示ERR
+ 291   5                Password=0;                                 //密码清零
+ 292   5                Count=0;                                    //计次清零
+ 293   5                InputTime--;                                //减少输入机会
+ 294   5                LCD_ShowNum(1,13,Password,4);               //更新显示
+ 295   5                LCD_ShowNum(2,7,InputTime,1);
+ 296   5              }
+ 297   4              else                                          //机会用完了以后开始报警
+ 298   4              {
+ 299   5                while(1)                                    //进入蜂鸣器报警
+ 300   5                {
+ 301   6                  Buzzer_Time(100);
+ 302   6                  Delay(100);
+C51 COMPILER V9.54   MAIN                                                                  06/16/2022 15:36:50 PAGE 6   
+
+ 303   6                }
+ 304   5              }
+ 305   4            }
+ 306   3            if(KeyNum==12)                                  //如果S12按键按下，取消
+ 307   3            {
+ 308   4              Buzzer_Time(100);
+ 309   4              Password=0;                                   //密码清零
+ 310   4              Count=0;                                      //计次清零
+ 311   4              LCD_ShowNum(1,13,Password,4);                 //更新显示
+ 312   4            }
+ 313   3            if(KeyNum==16)                                  //如果S16案件按下，退出
+ 314   3            {
+ 315   4              Buzzer_Time(100);                             //反馈按键按下
+ 316   4              if(Unlocked==1)                               //如果当时为解锁的状态
+ 317   4              {
+ 318   5                Lock();                                     //解锁
+ 319   5                Unlocked=0;                                 //解锁变量置为未解锁
+ 320   5                Password=0;                                 //重置密码
+ 321   5              }
+ 322   4              LCD_Init();                                   //清屏
+ 323   4              return;
+ 324   4            }
+ 325   3          }
+ 326   2        }
+ 327   1      }
+ 328          //退出程序
+ 329          void Exit()
+ 330          {
+ 331   1        LCD_Init();
+ 332   1        LCD_ShowString(1,1,"Thank you !!");
+ 333   1        LCD_ShowString(2,1,"From:");
+ 334   1        LCD_ShowString(2,6,"CJH,WYH,ZWY");                //组员的名字
+ 335   1        while(1)
+ 336   1        {
+ 337   2          
+ 338   2        }
+ 339   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1216    ----
+   CONSTANT SIZE    =    146    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      9       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,104 @@
+C51 COMPILER V9.54   SERVO                                                                 06/15/2022 17:01:11 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE SERVO
+OBJECT MODULE PLACED IN .\Objects\Servo.obj
+COMPILER INVOKED BY: D:\C51\C51\BIN\C51.EXE Servo.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\Servo.l
+                    -st) TABS(2) OBJECT(.\Objects\Servo.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "Delay.h"
+   3          
+   4          static int k=0;
+   5          sbit signal=P1^0;           //SG90PMW的引脚接线的时候要注意接到这个口
+   6          
+   7          //旋转度数的宏定义，更改旋转角度
+   8          #define spin0 1
+   9          #define spin45 2
+  10          #define spin90 3
+  11          #define spin135 4
+  12          #define spin180 5
+  13          unsigned int spin;
+  14          
+  15          void timer_init()       //0.5ms定时器初始化
+  16          {
+  17   1        TMOD=0x01;            //定时器0工作模式16位计数器
+  18   1        ET0=1;                //允许定时器0中断
+  19   1        TR0=1;                //开启定时器0中断
+  20   1        EA=1;                 //开启总中断
+  21   1        TH0=0xFE;
+  22   1        TL0=0x33;             //0.5ms定时对应到Unlock里面那个Delay(500)
+  23   1        
+  24   1      }
+  25          
+  26          void timer_close()
+  27          {
+  28   1        ET0=0;                //不允许定时器0中断
+  29   1        TR0=0;                //关闭定时器0中断
+  30   1        EA=0;                 //关闭总中断
+  31   1      }
+  32          
+  33          void Timer0() interrupt 1
+  34          {
+  35   1        TR0=0;                //关闭计数
+  36   1        k=k+1;
+  37   1        TH0=0xFE;
+  38   1        TL0=0x33;             //重置使得下次定时器只计时0.5ms
+  39   1        if(k<=spin)
+  40   1        {
+  41   2          signal=1;
+  42   2        }
+  43   1        else
+  44   1        {
+  45   2          signal=0;
+  46   2          if(k==40)
+  47   2          {
+  48   3            k=0;
+  49   3          }
+  50   2        }
+  51   1        TR0=1;                //开启计数
+  52   1        
+  53   1      }
+  54          void delayms(int ms)
+C51 COMPILER V9.54   SERVO                                                                 06/15/2022 17:01:11 PAGE 2   
+
+  55          {
+  56   1        int i,j;
+  57   1        for(j=ms;j>0;j--)
+  58   1          for(i=110;i>0;i--);
+  59   1      }
+  60          void Unlock()
+  61          {
+  62   1          P1=0x00;
+  63   1          timer_init();       //0.5ms定时器初始化
+  64   1          spin=spin180;
+  65   1          delayms(500);
+  66   1          timer_close();      //关闭其中断
+  67   1      }
+  68          void Lock()
+  69          {
+  70   1        P1=0x00;
+  71   1        timer_init();         //0.5ms定时器初始化
+  72   1        spin=spin0;
+  73   1        delayms(500);
+  74   1        P1=0x00;
+  75   1        timer_close();        //关闭其中断
+  76   1      
+  77   1      }
+  78          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    156    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

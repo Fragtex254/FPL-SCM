@@ -1,0 +1,1 @@
+"Uart.c" OPTIMIZE (8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\Uart.lst) TABS (2) OBJECT(.\Objects\Uart.obj)
